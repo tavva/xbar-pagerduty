@@ -69,6 +69,10 @@ def callback():
     return html
 
 
+def shutdown_server():
+    threading.Timer(1.0, lambda: os._exit(0)).start()
+
+
 def open_browser():
     threading.Timer(
         1.0, lambda: webbrowser.open_new_tab("http://127.0.0.1:5000")
