@@ -2,4 +2,4 @@
 python = "3.13"
 
 [env]
-_.python.venv = { path = ".env" }
+_.python.venv = { path = ".env", create=true }
