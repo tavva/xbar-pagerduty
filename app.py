@@ -79,6 +79,10 @@ def open_browser():
     ).start()
 
 
-if __name__ == "__main__":
+def run_server():
     open_browser()
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+
+if __name__ == "__main__":
+    run_server()
