@@ -60,6 +60,7 @@ def callback():
             json.dump({"api_token": api_token}, json_file)
 
         html = "You are logged in, you can close this now."
+        shutdown_server()
 
     except HTTPError as e:
         print(e)
