@@ -144,7 +144,7 @@ def main():
     menu = []
 
     user = get_user()
-    menu.append(f'{user["name"]} | href={user["html_url"]}')
+    menu.append(f'Logged in as: {user["name"]} | href={user["html_url"]}')
 
     teams = get_teams(user)
     log("teams:")
