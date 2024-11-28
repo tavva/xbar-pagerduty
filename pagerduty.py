@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+ACCESS_TOKEN = None
+
 
 def log(message):
     if os.environ.get("DEBUG"):
@@ -43,6 +45,14 @@ def load_config():
             return config
     except FileNotFoundError:
         return {}
+
+
+def check_login():
+    config = load_config()
+    if not config.get("access_token"):
+        prompt_login()
+    global ACCESS_TOKEN
+    ACCESS_TOKEN = config["access_token"]
 
 
 def prompt_login():
