@@ -162,18 +162,6 @@ def main():
     output_menu(menu)
 
 
-# for team_id, team_summary, team_url in teams:
-#     menu[1].append("---")
-#     menu[1].append(f"{team_summary} | href={team_url}")
-#     menu[1].append("---")
-#     log("team_id: " + team_id)
-#     for service in services[team_id]:
-#         menu[1].append(
-#             f'{service["name"]} | href={
-#                 service["html_url"]} | size=10'
-#         )
-
-
 # Get all schedules for my teams
 # Get all escalation policies for my schedules
 # Get all oncalls for my escalation policies
