@@ -75,10 +75,10 @@ def callback():
 
         token_res.raise_for_status()
         body = token_res.json()
-        api_token = body["access_token"]
+        access_token = body["access_token"]
 
         with open("xbar-pagerduty.json", "w") as json_file:
-            json.dump({"api_token": api_token}, json_file)
+            json.dump({"access_token": access_token}, json_file)
 
         html = "You are logged in, you can close this now."
         shutdown_server()
