@@ -13,9 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ACCESS_TOKEN = None
-
-session = pdpyras.APISession(ACCESS_TOKEN, auth_type="oauth2")
+session = None
 
 
 def log(message):
@@ -51,8 +49,9 @@ def check_login():
     config = load_config()
     if not config.get("access_token"):
         prompt_login()
-    global ACCESS_TOKEN
-    ACCESS_TOKEN = config["access_token"]
+
+    global session
+    session = pdpyras.APISession(config["access_token"], auth_type="oauth2")
 
 
 def prompt_login():
