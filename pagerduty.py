@@ -68,7 +68,7 @@ def prompt_login():
 def output_menu(menu):
     print("☎")
     print("---")
-    for item in menu[1]:
+    for item in menu:
         print(item)
 
 
@@ -159,7 +159,7 @@ def main():
 
     menu.extend(process_incidents(incidents))
 
-    output_menu()
+    output_menu(menu)
 
 
 # for team_id, team_summary, team_url in teams:
