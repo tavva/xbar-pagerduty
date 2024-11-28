@@ -73,7 +73,7 @@ def output_menu(menu):
         print(item)
 
 
-def get_user(session):
+def get_user():
     response = session.get("/users/me").json()
     user = response["user"]
     log(user)
@@ -144,7 +144,7 @@ def main():
 
     menu = []
 
-    user = get_user(session)
+    user = get_user()
     menu.append(f'{user["name"]} | href={user["html_url"]}')
 
     teams = get_teams(user)
