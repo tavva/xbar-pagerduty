@@ -6,7 +6,7 @@ import sys
 
 def log(message):
     if os.environ.get("DEBUG"):
-        with open("/Users/Ben.Phillips/xbar-logging.txt", "a") as f:
+        with open("/tmp/xbar-logging.txt", "a") as f:
             f.write("in app.py: ")
             f.write(message)
             f.write("\n")

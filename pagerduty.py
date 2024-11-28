@@ -11,7 +11,7 @@ load_dotenv()
 
 def log(message):
     if os.environ.get("DEBUG"):
-        with open("/Users/Ben.Phillips/xbar-logging.txt", "a") as f:
+        with open("/tmp/xbar-logging.txt", "a") as f:
             f.write("in pagerduty.py")
             if len(sys.argv) > 1:
                 f.write(" (loadapp)")
