@@ -3,7 +3,9 @@
 import json
 import os
 import sys
+from collections import defaultdict
 
+import pdpyras
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,14 +14,14 @@ ACCESS_TOKEN = None
 
 
 def log(message):
-    if os.environ.get("DEBUG"):
-        with open("/tmp/xbar-logging.txt", "a") as f:
-            f.write("in pagerduty.py")
-            if len(sys.argv) > 1:
-                f.write(" (loadapp)")
-            f.write(": ")
-            f.write(message)
-            f.write("\n")
+    # if os.environ.get("DEBUG"):
+    with open("/tmp/xbar-logging.txt", "a") as f:
+        f.write("in pagerduty.py")
+        if len(sys.argv) > 1:
+            f.write(" (loadapp)")
+        f.write(": ")
+        f.write(str(message))
+        f.write("\n")
 
 
 log("sys.argv: " + ", ".join(sys.argv))
@@ -78,6 +80,55 @@ check_login()
 menu = ("☎", [])
 
 
+def get_user(session):
+    response = session.get("/users/me").json()
+    user = response["user"]
+    log(user)
+
+    return user
+
+
+def get_teams(user):
+    import re
+
+    return [
+        (x["id"], re.sub(r"\|", "¦", x["summary"]), x["html_url"])
+        for x in user["teams"]
+    ]
+
+
+def get_services(teams):
+    services = session.list_all("services", params={"team_ids": [x[0] for x in teams]})
+    grouped_services = defaultdict(list)
+    for service in services:
+        for team in service["teams"]:
+            grouped_services[team["id"]].append(service)
+
+    return grouped_services
+
+
+session = pdpyras.APISession(ACCESS_TOKEN, auth_type="oauth2")
+user = get_user(session)
+menu[1].append(f'{user["name"]} | href={user["html_url"]}')
+
+teams = get_teams(user)
+log(teams)
+services = get_services(teams)
+log(services)
+
+for team_id, team_summary, team_url in teams:
+    menu[1].append("---")
+    menu[1].append(f"{team_summary} | href={team_url}")
+    menu[1].append("---")
+    for service in services[team_id]:
+        menu[1].append(
+            f'{service["name"]} | href={
+                service["html_url"]} | size=10'
+        )
+
+
 # Get all schedules for my teams
 # Get all escalation policies for my schedules
 # Get all oncalls for my escalation policies
+
+output_menu()
