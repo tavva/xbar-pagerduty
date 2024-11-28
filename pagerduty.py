@@ -49,7 +49,6 @@ def prompt_login():
     print("Login | color=red")
     print("---")
     app_script_path = os.path.join("xbar-pagerduty", "pagerduty.py")
-    print(app_script_path)
     print(
         f'Login | shell="{
             app_script_path}" param1="loadapp" | color=red'
