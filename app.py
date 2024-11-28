@@ -80,6 +80,9 @@ def callback():
         with open("xbar-pagerduty.json", "w") as json_file:
             json.dump({"access_token": access_token}, json_file)
 
+        url = "xbar://app.xbarapp.com/refreshPlugin?path=001-pagerduty.1m.py"
+        os.system(f"open '{url}'")
+
         html = "You are logged in, you can close this now."
         shutdown_server()
 
