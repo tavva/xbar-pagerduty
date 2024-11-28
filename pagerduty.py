@@ -56,16 +56,27 @@ def check_login():
 
 
 def prompt_login():
-    print("Login | color=red")
+    print("⚠️ | color=red")
     print("---")
     app_script_path = os.path.join("xbar-pagerduty", "pagerduty.py")
     print(
         f'Login | shell="{
             app_script_path}" param1="loadapp" | color=red'
     )
+    sys.exit(0)
 
 
-prompt_login()
+def output_menu():
+    print(menu[0])
+    print("---")
+    for item in menu[1]:
+        print(item)
+
+
+check_login()
+
+menu = ("☎", [])
+
 
 # Get all schedules for my teams
 # Get all escalation policies for my schedules
