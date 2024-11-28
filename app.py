@@ -1,5 +1,26 @@
 #!xbar-pagerduty/.venv/bin/python3
 
+import os
+import sys
+
+
+def log(message):
+    if os.environ.get("DEBUG"):
+        with open("/Users/Ben.Phillips/xbar-logging.txt", "a") as f:
+            f.write("in app.py: ")
+            f.write(message)
+            f.write("\n")
+
+
+log(f"Python executable: {sys.executable}")
+log(f"Python version: {sys.version}")
+log(f"sys.path: {sys.path}")
+log(f"Environment variables:{os.environ}")
+
+log(os.getcwd())
+log(os.getlogin())
+
+
 import json
 import os
 import threading
