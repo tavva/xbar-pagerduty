@@ -159,35 +159,35 @@ def process_incidents(
                 team_incident_data[team["id"]].recent += 1
                 team_incident_data[team["id"]].services[service["id"]].recent += 1
 
-    def render_counts(team_id: str, service_id: Optional[str] = None) -> str:
-        data = team_incident_data[team_id]
-        if service_id:
-            counts = data.services[service_id]
-        else:
-            counts = data
-        return f"{counts.total} / {counts.recent}"
-
     for team_id, team_name, team_url in teams:
-        if team_id in team_incident_data:
-            menu.append(f"{team_name} ({render_counts(team_id)}) | href={team_url}")
+        menu.append(f"{team_name} ({render_counts(team_id)}) | href={team_url}")
 
-            team_services = services.get("grouped_services", {}).get(team_id, [])
+        team_services = services.get("grouped_services", {}).get(team_id, [])
+        if team_services:
             for service in team_services:
-                if service["id"] in team_incident_data[team_id].services:
-                    menu.append(
-                        format_menu_item(
-                            f"--{service['summary']} ({render_counts(team_id, service['id'])})",
-                            href=service["html_url"],
-                        )
+                service_id = service["id"]
+                service_counts = team_incident_data[team_id].services[service_id]
+                menu.append(
+                    format_menu_item(
+                        f"--{service['summary']} ({service_counts.total} / {service_counts.recent})",
+                        href=service["html_url"],
                     )
+                )
 
-            for incident in incidents:
-                if any(team["id"] == team_id for team in incident["teams"]):
+                service_incidents = [
+                    inc
+                    for inc in incidents
+                    if inc["service"]["id"] == service_id
+                    and any(team["id"] == team_id for team in inc["teams"])
+                ]
+                for incident in service_incidents:
                     menu.append(
                         format_menu_item(
                             f"----{incident['title']}", href=incident["html_url"]
                         )
                     )
+        else:
+            menu.append("--No services")
 
     return menu
 
