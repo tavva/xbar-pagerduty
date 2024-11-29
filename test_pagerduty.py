@@ -56,7 +56,9 @@ class TestIncidentProcessing(unittest.TestCase):
         self.recent_incident = {
             "id": "1",
             "title": "Recent Incident",
-            "created_at": (self.now - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "created_at": (self.now - timedelta(days=1)).strftime(
+                "%Y-%m-%dT%H:%M:%S+00:00"
+            ),
             "status": "triggered",
             "html_url": "http://example.com/1",
             "service": {
@@ -71,7 +73,9 @@ class TestIncidentProcessing(unittest.TestCase):
         self.old_incident = {
             "id": "2",
             "title": "Old Incident",
-            "created_at": (self.now - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "created_at": (self.now - timedelta(days=5)).strftime(
+                "%Y-%m-%dT%H:%M:%S+00:00"
+            ),
             "status": "resolved",
             "html_url": "http://example.com/2",
             "service": {

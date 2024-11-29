@@ -142,7 +142,9 @@ def process_incidents(
         teams_data = incident["teams"]
         service = incident["service"]
         service_lookup[service["id"]] = service
-        created_at = datetime.strptime(incident["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        created_at = datetime.strptime(
+            incident["created_at"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S%z"
+        )
 
         for team in teams_data:
             team_lookup[team["id"]] = team
