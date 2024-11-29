@@ -188,10 +188,5 @@ def main():
     output_menu(menu)
 
 
-# Get all schedules for my teams
-# Get all escalation policies for my schedules
-# Get all oncalls for my escalation policies
-
-
 if __name__ == "__main__":
     main()
