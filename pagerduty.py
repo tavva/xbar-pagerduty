@@ -131,6 +131,18 @@ def load_config() -> Optional[str]:
     return None
 
 
+def render_counts(
+    team_incident_data: Dict[str, TeamIncidentData],
+    team_id: str,
+    service_id: Optional[str] = None,
+) -> str:
+    if service_id:
+        counts = team_incident_data[team_id].services[service_id]
+    else:
+        counts = team_incident_data[team_id]
+    return f"{counts.total} / {counts.recent}"
+
+
 def process_incidents(
     incidents: List[Dict], teams: List[Tuple[str, str, str]], services: Dict[str, Any]
 ) -> List[str]:
@@ -142,7 +154,6 @@ def process_incidents(
 
     recent_threshold = datetime.now(UTC) - timedelta(days=3)
 
-    # Process incidents
     for incident in incidents:
         teams_data = incident["teams"]
         service = incident["service"]
@@ -160,16 +171,17 @@ def process_incidents(
                 team_incident_data[team["id"]].services[service["id"]].recent += 1
 
     for team_id, team_name, team_url in teams:
-        menu.append(f"{team_name} ({render_counts(team_id)}) | href={team_url}")
+        menu.append(
+            f"{team_name} ({render_counts(team_incident_data, team_id)}) | href={team_url}"
+        )
 
         team_services = services.get("grouped_services", {}).get(team_id, [])
         if team_services:
             for service in team_services:
                 service_id = service["id"]
-                service_counts = team_incident_data[team_id].services[service_id]
                 menu.append(
                     format_menu_item(
-                        f"--{service['summary']} ({service_counts.total} / {service_counts.recent})",
+                        f"--{service['summary']} ({render_counts(team_incident_data, team_id, service_id)})",
                         href=service["html_url"],
                     )
                 )
