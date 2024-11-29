@@ -2,7 +2,6 @@
 
 import json
 import logging
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
