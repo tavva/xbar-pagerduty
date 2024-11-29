@@ -84,7 +84,11 @@ class PagerDutyClient:
             service_ids = [service["id"] for service in services]
             logger.debug("Fetching incidents for service_ids: %s", service_ids)
             incidents = self.session.list_all(
-                "incidents", params={"service_ids": service_ids}
+                "incidents",
+                params={
+                    "service_ids": service_ids,
+                    "time_zone": "UTC",
+                },
             )
 
             grouped_services = defaultdict(list)
