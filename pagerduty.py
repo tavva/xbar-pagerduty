@@ -1,10 +1,12 @@
 #!xbar-pagerduty/.venv/bin/python3
 
+import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 import pdpyras
 
@@ -17,7 +19,7 @@ logging.basicConfig(
 @dataclass
 class PagerDutyError(Exception):
     message: str
-    status_code: Optional[int] = None
+    status_code: int = None
     response: Any = None
 
 
@@ -143,3 +145,84 @@ class PagerDutyClient:
     @staticmethod
     def _clean_team_name(name: str) -> str:
         return name.replace("|", "¦")
+
+
+def format_menu_item(text: str, **kwargs) -> str:
+    params = " ".join(f"{k}={v}" for k, v in kwargs.items() if v is not None)
+    return f"{text} | {params}" if params else text
+
+
+def load_config() -> Optional[str]:
+    """Load PagerDuty token from OAuth config file"""
+    try:
+        config_path = Path("xbar-pagerduty.json")
+        if config_path.exists():
+            with open(config_path) as f:
+                config = json.load(f)
+                return config.get("access_token")
+    except Exception as e:
+        logger.error("Error reading config file: %s", e)
+    return None
+
+
+def main():
+    try:
+        access_token = load_config()
+        if not access_token:
+            print("☎️ | color=red")
+            print("---")
+            print("Click here to login | bash='./app.py'")
+            return
+
+        client = PagerDutyClient(access_token)
+
+        user = client.get_user()
+        teams = client.get_teams(user)
+        team_ids = [team.id for team in teams]
+
+        data = client.get_services_and_incidents(team_ids)
+        incidents = data["incidents"]
+
+        active_incidents = [i for i in incidents if i.status != "resolved"]
+
+        # Header - normal phone icon for functioning state
+        print("☎️")
+        print("---")
+
+        print(
+            format_menu_item(
+                f'Logged in as: {user["name"]}',
+                href=user["html_url"],
+            )
+        )
+
+        if active_incidents:
+            print(
+                format_menu_item(
+                    f"🔴 {len(active_incidents)} active incidents", color="red"
+                )
+            )
+        else:
+            print(format_menu_item("✅ No active incidents"))
+
+        print("---")
+
+        for incident in active_incidents:
+            print(format_menu_item(incident.title, href=incident.url))
+
+    except PagerDutyError as e:
+        logger.error("PagerDuty error: %s", e.message)
+        print("☎️ | color=red")
+        print("---")
+        print(format_menu_item("PagerDuty Error", color="red"))
+        print(e.message)
+    except Exception as e:
+        logger.error("Unexpected error: %s", e)
+        print("☎️ | color=red")
+        print("---")
+        print(format_menu_item("Error", color="red"))
+        print(f"An unexpected error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()
