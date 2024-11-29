@@ -167,21 +167,25 @@ def process_incidents(
             counts = data
         return f"{counts.total} / {counts.recent}"
 
-    # Generate menu items
     for team_id, team_name, team_url in teams:
         if team_id in team_incident_data:
-            menu.append(
-                f"---\n{team_name} ({render_counts(team_id)}) | href={team_url}\n---"
-            )
+            menu.append(f"{team_name} ({render_counts(team_id)}) | href={team_url}")
 
-            # Add services for this team
             team_services = services.get("grouped_services", {}).get(team_id, [])
             for service in team_services:
                 if service["id"] in team_incident_data[team_id].services:
                     menu.append(
                         format_menu_item(
-                            f"{service['summary']} ({render_counts(team_id, service['id'])})",
+                            f"--{service['summary']} ({render_counts(team_id, service['id'])})",
                             href=service["html_url"],
+                        )
+                    )
+
+            for incident in incidents:
+                if any(team["id"] == team_id for team in incident["teams"]):
+                    menu.append(
+                        format_menu_item(
+                            f"----{incident['title']}", href=incident["html_url"]
                         )
                     )
 

@@ -105,12 +105,50 @@ class TestIncidentProcessing(unittest.TestCase):
 
         menu_items = process_incidents(incidents, teams, services)
 
-        self.assertTrue(any("Team 1 (2 / 1)" in item for item in menu_items))
-        self.assertTrue(any("Service 1 (2 / 1)" in item for item in menu_items))
+        # Check menu structure
+        self.assertTrue(
+            any(
+                "Team 1 (2 / 1)" in item and not item.startswith("-")
+                for item in menu_items
+            )
+        )
+        self.assertTrue(any("--Service 1 (2 / 1)" in item for item in menu_items))
+        self.assertTrue(any("----Recent Incident" in item for item in menu_items))
+        self.assertTrue(any("----Old Incident" in item for item in menu_items))
 
     def test_process_incidents_empty(self):
         menu_items = process_incidents([], [], {"grouped_services": {}})
         self.assertEqual(menu_items, [])
+
+    def test_menu_structure(self):
+        """Test that menu items are properly indented"""
+        incidents = [self.recent_incident]
+        teams = [("T1", "Team 1", "http://example.com/t1")]
+        services = {
+            "grouped_services": {
+                "T1": [
+                    {
+                        "id": "S1",
+                        "summary": "Service 1",
+                        "html_url": "http://example.com/s1",
+                    }
+                ]
+            }
+        }
+
+        menu_items = process_incidents(incidents, teams, services)
+
+        # Check the hierarchy
+        levels = {"team": 0, "service": 2, "incident": 4}
+
+        for item in menu_items:
+            indent_level = len(item) - len(item.lstrip("-"))
+            if "Team 1" in item:
+                self.assertEqual(indent_level, levels["team"])
+            elif "Service 1" in item:
+                self.assertEqual(indent_level, levels["service"])
+            elif "Recent Incident" in item:
+                self.assertEqual(indent_level, levels["incident"])
 
 
 class TestMenuFormatting(unittest.TestCase):
