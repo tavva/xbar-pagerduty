@@ -150,6 +150,49 @@ class TestIncidentProcessing(unittest.TestCase):
             elif "Recent Incident" in item:
                 self.assertEqual(indent_level, levels["incident"])
 
+    def test_teams_without_incidents(self):
+        incidents = []
+        teams = [
+            ("T1", "Team 1", "http://example.com/t1"),
+            ("T2", "Team 2", "http://example.com/t2"),
+        ]
+        services = {
+            "grouped_services": {
+                "T1": [
+                    {
+                        "id": "S1",
+                        "summary": "Service 1",
+                        "html_url": "http://example.com/s1",
+                    }
+                ],
+                "T2": [
+                    {
+                        "id": "S2",
+                        "summary": "Service 2",
+                        "html_url": "http://example.com/s2",
+                    }
+                ],
+            }
+        }
+
+        menu_items = process_incidents(incidents, teams, services)
+
+        self.assertTrue(any("Team 1 (0 / 0)" in item for item in menu_items))
+        self.assertTrue(any("Team 2 (0 / 0)" in item for item in menu_items))
+
+        self.assertTrue(any("--Service 1 (0 / 0)" in item for item in menu_items))
+        self.assertTrue(any("--Service 2 (0 / 0)" in item for item in menu_items))
+
+    def test_team_without_services(self):
+        incidents = []
+        teams = [("T1", "Team 1", "http://example.com/t1")]
+        services = {"grouped_services": {}}
+
+        menu_items = process_incidents(incidents, teams, services)
+
+        self.assertTrue(any("Team 1 (0 / 0)" in item for item in menu_items))
+        self.assertTrue(any("--No services" in item for item in menu_items))
+
 
 class TestMenuFormatting(unittest.TestCase):
     def test_format_menu_item(self):
