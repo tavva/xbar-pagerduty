@@ -87,6 +87,7 @@ class PagerDutyClient:
                 "incidents",
                 params={
                     "service_ids": service_ids,
+                    "statuses[]": ["triggered", "acknowledged"],  # Exclude resolved
                     "time_zone": "UTC",
                 },
             )
@@ -96,7 +97,7 @@ class PagerDutyClient:
                 for team in service["teams"]:
                     grouped_services[team["id"]].append(service)
 
-            logger.debug("Successfully retrieved services and incidents")
+            logger.debug("Successfully retrieved services and active incidents")
             return {"grouped_services": dict(grouped_services), "incidents": incidents}
 
         except pdpyras.PDClientError as e:
@@ -141,7 +142,7 @@ def process_incidents(
 
     recent_threshold = datetime.now(UTC) - timedelta(days=3)
 
-    # Process incidents
+    # Process incidents (all incidents here are already active)
     for incident in incidents:
         teams_data = incident["teams"]
         service = incident["service"]

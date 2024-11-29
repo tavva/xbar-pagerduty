@@ -76,7 +76,7 @@ class TestIncidentProcessing(unittest.TestCase):
             "created_at": (self.now - timedelta(days=5)).strftime(
                 "%Y-%m-%dT%H:%M:%S+00:00"
             ),
-            "status": "resolved",
+            "status": "acknowledged",
             "html_url": "http://example.com/2",
             "service": {
                 "id": "S1",
