@@ -1,192 +1,89 @@
 #!xbar-pagerduty/.venv/bin/python3
 
-import datetime
-import json
-import os
-import pprint
-import re
-import sys
+import logging
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
 
 import pdpyras
-from dotenv import load_dotenv
 
-load_dotenv()
-
-session = None
-
-
-def log(message):
-    # if os.environ.get("DEBUG"):
-    with open("/tmp/xbar-logging.txt", "a") as f:
-        f.write("in pagerduty.py")
-        if len(sys.argv) > 1:
-            f.write(" (loadapp)")
-        f.write(": ")
-        pprint.pprint(message, stream=f)
-        f.write("\n")
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 
-def log_env():
-    log("sys.argv: " + ", ".join(sys.argv))
-    log(f"Python executable: {sys.executable}")
-    log(f"Python version: {sys.version}")
-    log(f"sys.path: {sys.path}")
-    log(f"Environment variables:{os.environ}")
-    log(f"cwd: {os.getcwd()}")
+@dataclass
+class PagerDutyError(Exception):
+    message: str
+    status_code: int = None
+    response: Any = None
 
 
-def load_config():
-    try:
-        with open("xbar-pagerduty.json") as config_file:
-            config = json.load(config_file)
-            return config
-    except FileNotFoundError:
-        return {}
+class PagerDutyClient:
+    def __init__(self, access_token: str):
+        if not access_token:
+            logger.error("No access token provided")
+            raise ValueError("Access token is required")
 
-
-def check_login():
-    config = load_config()
-    if not config.get("access_token"):
-        prompt_login()
-
-    global session
-    session = pdpyras.APISession(config["access_token"], auth_type="oauth2")
-
-
-def prompt_login():
-    print("⚠️ | color=red")
-    print("---")
-    app_script_path = os.path.join("xbar-pagerduty", "pagerduty.py")
-    print(
-        f'Login | shell="{
-            app_script_path}" param1="loadapp" | color=red'
-    )
-    sys.exit(0)
-
-
-def output_menu(menu):
-    print("☎")
-    print("---")
-    for item in menu:
-        print(item)
-
-
-def get_user():
-    response = session.get("/users/me").json()
-    user = response["user"]
-    log(user)
-
-    return user
-
-
-def get_teams(user):
-    return [
-        (x["id"], re.sub(r"\|", "¦", x["summary"]), x["html_url"])
-        for x in user["teams"]
-    ]
-
-
-def get_services_and_incidents(teams):
-    services = session.list_all("services", params={"team_ids": [x[0] for x in teams]})
-    service_ids = [x["id"] for x in services]
-
-    incidents = session.list_all("incidents", params={"service_ids": service_ids})
-    log("incidents:")
-    log(incidents)
-
-    grouped_services = defaultdict(list)
-    for service in services:
-        for team in service["teams"]:
-            grouped_services[team["id"]].append(service)
-
-    return {"grouped_services": grouped_services, "incidents": incidents}
-
-
-def process_incidents(incidents):
-    menu = []
-    team_lookup = {}
-    service_lookup = {}
-
-    team_incident_data = defaultdict(
-        lambda: {
-            "total": 0,
-            "recent": 0,
-            "services": defaultdict(lambda: {"total": 0, "recent": 0}),
-        }
-    )
-
-    recent_threshold = datetime.datetime.utcnow() - datetime.timedelta(days=3)
-
-    for incident in incidents:
-        teams = incident["teams"]
-        service = incident["service"]
-        service_lookup[service["id"]] = service
-        created_at = datetime.datetime.strptime(
-            incident["created_at"], "%Y-%m-%dT%H:%M:%SZ"
+        self.session = pdpyras.APISession(
+            access_token, auth_type="oauth2", default_from=datetime.utcnow().isoformat()
         )
+        logger.debug("PagerDuty client initialized")
 
-        for team in teams:
-            team_lookup[team["id"]] = team
-            team_incident_data[team["id"]]["total"] += 1
-            team_incident_data[team["id"]]["services"][service["id"]]["total"] += 1
-            if created_at > recent_threshold:
-                team_incident_data[team["id"]]["recent"] += 1
-                team_incident_data[team["id"]]["services"][service["id"]]["recent"] += 1
-
-    def render_counts(team, service=None):
-        entity = team_incident_data[team]
-        if service:
-            entity = entity["services"][service]
-        return f"{entity["total"]} / {entity["recent"]}"
-
-    for team_id in team_incident_data.keys():
-        team = team_lookup[team_id]
-        team_name = re.sub(r"\|", "¦", team["summary"])
-        menu.append(
-            f"---\n{team_name} ({render_counts(team_id)
-                                 }) | href={team["html_url"]}\n---"
-        )
-        for service_id in team_incident_data[team_id]["services"].keys():
-            service = service_lookup[service_id]
-            menu.append(
-                f"{service["summary"]} ({
-                    render_counts(team_id, service_id)}) | href={service["html_url"]}"
+    def get_user(self) -> Dict[str, Any]:
+        try:
+            response = self.session.get("/users/me")
+            logger.debug("Successfully retrieved user information")
+            return response.json()["user"]
+        except pdpyras.PDClientError as e:
+            logger.error("Failed to get user info: %s", e)
+            raise PagerDutyError(
+                message="Failed to get user information",
+                status_code=e.response.status_code if e.response else None,
+                response=e.response,
             )
 
-    return menu
+    def get_teams(self, user: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+        try:
+            teams = [
+                (team["id"], self._clean_team_name(team["summary"]), team["html_url"])
+                for team in user.get("teams", [])
+            ]
+            logger.debug("Successfully retrieved teams data")
+            return teams
+        except KeyError as e:
+            logger.error("Malformed team data: %s", e)
+            raise PagerDutyError(f"Invalid team data structure: {e}")
 
+    def get_services_and_incidents(self, team_ids: List[str]) -> Dict[str, Any]:
+        try:
+            logger.debug("Fetching services for team_ids: %s", team_ids)
+            services = self.session.list_all("services", params={"team_ids": team_ids})
 
-def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "loadapp":
-        log("we're in loadapp")
-        from app import run_server
+            service_ids = [service["id"] for service in services]
+            logger.debug("Fetching incidents for service_ids: %s", service_ids)
+            incidents = self.session.list_all(
+                "incidents", params={"service_ids": service_ids}
+            )
 
-        run_server()
-        sys.exit(0)
+            grouped_services = defaultdict(list)
+            for service in services:
+                for team in service["teams"]:
+                    grouped_services[team["id"]].append(service)
 
-    check_login()
+            logger.debug("Successfully retrieved services and incidents")
+            return {"grouped_services": dict(grouped_services), "incidents": incidents}
 
-    menu = []
+        except pdpyras.PDClientError as e:
+            logger.error("Failed to fetch services and incidents: %s", e)
+            raise PagerDutyError(
+                message="Failed to fetch services and incidents",
+                status_code=e.response.status_code if e.response else None,
+                response=e.response,
+            )
 
-    user = get_user()
-    menu.append(f'Logged in as: {user["name"]} | href={user["html_url"]}')
-
-    teams = get_teams(user)
-    log("teams:")
-    log(teams)
-    services_and_incidents = get_services_and_incidents(teams)
-    services = services_and_incidents["grouped_services"]
-    incidents = services_and_incidents["incidents"]
-    log("services:")
-    log(services)
-    log("incidents:")
-    log(incidents)
-
-    menu.extend(process_incidents(incidents))
-
-    output_menu(menu)
-
-
-if __name__ == "__main__":
-    main()
+    @staticmethod
+    def _clean_team_name(name: str) -> str:
+        return name.replace("|", "¦")
