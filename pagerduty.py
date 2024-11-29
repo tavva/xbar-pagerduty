@@ -105,28 +105,54 @@ def get_services_and_incidents(teams):
 
 def process_incidents(incidents):
     menu = []
+    team_lookup = {}
+    service_lookup = {}
 
-    team_incident_data = defaultdict(lambda: {"total": 0, "recent": 0})
+    team_incident_data = defaultdict(
+        lambda: {
+            "total": 0,
+            "recent": 0,
+            "services": defaultdict(lambda: {"total": 0, "recent": 0}),
+        }
+    )
 
     recent_threshold = datetime.datetime.utcnow() - datetime.timedelta(days=3)
 
     for incident in incidents:
         teams = incident["teams"]
-        service = incident["service"]["summary"]
+        service = incident["service"]
+        service_lookup[service["id"]] = service
         created_at = datetime.datetime.strptime(
             incident["created_at"], "%Y-%m-%dT%H:%M:%SZ"
         )
 
         for team in teams:
-            team_summary = team["summary"]
-            team_incident_data[team_summary]["total"] += 1
+            team_lookup[team["id"]] = team
+            team_incident_data[team["id"]]["total"] += 1
+            team_incident_data[team["id"]]["services"][service["id"]]["total"] += 1
             if created_at > recent_threshold:
-                team_incident_data[team_summary]["recent"] += 1
+                team_incident_data[team["id"]]["recent"] += 1
+                team_incident_data[team["id"]]["services"][service["id"]]["recent"] += 1
 
-    for team, data in team_incident_data.items():
-        team = re.sub(r"\|", "¦", team)
-        menu.append(f"---\n{team}\n---")
-        menu.append(f"{service} ({data['total']}) ({data['recent']})")
+    def render_counts(team, service=None):
+        entity = team_incident_data[team]
+        if service:
+            entity = entity["services"][service]
+        return f"{entity["total"]} / {entity["recent"]}"
+
+    for team_id in team_incident_data.keys():
+        team = team_lookup[team_id]
+        team_name = re.sub(r"\|", "¦", team["summary"])
+        menu.append(
+            f"---\n{team_name} ({render_counts(team_id)
+                                 }) | href={team["html_url"]}\n---"
+        )
+        for service_id in team_incident_data[team_id]["services"].keys():
+            service = service_lookup[service_id]
+            menu.append(
+                f"{service["summary"]} ({
+                    render_counts(team_id, service_id)}) | href={service["html_url"]}"
+            )
 
     return menu
 
