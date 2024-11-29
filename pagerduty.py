@@ -4,7 +4,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pdpyras
 
@@ -17,8 +17,61 @@ logging.basicConfig(
 @dataclass
 class PagerDutyError(Exception):
     message: str
-    status_code: int = None
+    status_code: Optional[int] = None
     response: Any = None
+
+
+@dataclass
+class Team:
+    id: str
+    name: str
+    url: str
+
+    @classmethod
+    def from_api_response(cls, data: Dict[str, Any]) -> "Team":
+        return cls(id=data["id"], name=data["summary"], url=data["html_url"])
+
+
+@dataclass
+class Service:
+    id: str
+    name: str
+    url: str
+    team_ids: List[str]
+
+    @classmethod
+    def from_api_response(cls, data: Dict[str, Any]) -> "Service":
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            url=data["html_url"],
+            team_ids=[team["id"] for team in data["teams"]],
+        )
+
+
+@dataclass
+class Incident:
+    id: str
+    title: str
+    url: str
+    status: str
+    created_at: datetime
+    service_id: str
+    team_ids: List[str]
+
+    @classmethod
+    def from_api_response(cls, data: Dict[str, Any]) -> "Incident":
+        return cls(
+            id=data["id"],
+            title=data["title"],
+            url=data["html_url"],
+            status=data["status"],
+            created_at=datetime.fromisoformat(
+                data["created_at"].replace("Z", "+00:00")
+            ),
+            service_id=data["service"]["id"],
+            team_ids=[team["id"] for team in data.get("teams", [])],
+        )
 
 
 class PagerDutyClient:
@@ -45,33 +98,36 @@ class PagerDutyClient:
                 response=e.response,
             )
 
-    def get_teams(self, user: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+    def get_teams(self, user: Dict[str, Any]) -> List[Team]:
         try:
-            teams = [
-                (team["id"], self._clean_team_name(team["summary"]), team["html_url"])
-                for team in user.get("teams", [])
-            ]
+            teams = [Team.from_api_response(team) for team in user.get("teams", [])]
             logger.debug("Successfully retrieved teams data")
             return teams
         except KeyError as e:
             logger.error("Malformed team data: %s", e)
             raise PagerDutyError(f"Invalid team data structure: {e}")
 
-    def get_services_and_incidents(self, team_ids: List[str]) -> Dict[str, Any]:
+    def get_services_and_incidents(
+        self, team_ids: List[str]
+    ) -> Dict[str, List[Union[Service, Incident]]]:
         try:
             logger.debug("Fetching services for team_ids: %s", team_ids)
-            services = self.session.list_all("services", params={"team_ids": team_ids})
+            raw_services = self.session.list_all(
+                "services", params={"team_ids": team_ids}
+            )
+            services = [Service.from_api_response(s) for s in raw_services]
 
-            service_ids = [service["id"] for service in services]
+            service_ids = [service.id for service in services]
             logger.debug("Fetching incidents for service_ids: %s", service_ids)
-            incidents = self.session.list_all(
+            raw_incidents = self.session.list_all(
                 "incidents", params={"service_ids": service_ids}
             )
+            incidents = [Incident.from_api_response(i) for i in raw_incidents]
 
             grouped_services = defaultdict(list)
             for service in services:
-                for team in service["teams"]:
-                    grouped_services[team["id"]].append(service)
+                for team_id in service.team_ids:
+                    grouped_services[team_id].append(service)
 
             logger.debug("Successfully retrieved services and incidents")
             return {"grouped_services": dict(grouped_services), "incidents": incidents}
