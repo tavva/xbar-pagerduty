@@ -109,7 +109,7 @@ class PagerDutyClient:
 
 
 def format_menu_item(text: str, **kwargs) -> str:
-    params = " ".join(f"{k}={v}" for k, v in kwargs.items() if v is not None)
+    params = " | ".join(f"{k}={v}" for k, v in kwargs.items() if v is not None)
     return f"{text} | {params}" if params else text
 
 
