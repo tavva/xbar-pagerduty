@@ -4,7 +4,7 @@ import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -47,7 +47,7 @@ class PagerDutyClient:
             raise ValueError("Access token is required")
 
         self.session = pdpyras.APISession(
-            access_token, auth_type="oauth2", default_from=datetime.utcnow().isoformat()
+            access_token, auth_type="oauth2", default_from=datetime.now(UTC).isoformat()
         )
         logger.debug("PagerDuty client initialized")
 
@@ -135,7 +135,7 @@ def process_incidents(
 
     team_incident_data = defaultdict(TeamIncidentData)
 
-    recent_threshold = datetime.utcnow() - timedelta(days=3)
+    recent_threshold = datetime.now(UTC) - timedelta(days=3)
 
     # Process incidents
     for incident in incidents:
