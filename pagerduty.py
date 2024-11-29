@@ -142,7 +142,7 @@ def process_incidents(
 
     recent_threshold = datetime.now(UTC) - timedelta(days=3)
 
-    # Process incidents (all incidents here are already active)
+    # Process incidents
     for incident in incidents:
         teams_data = incident["teams"]
         service = incident["service"]
